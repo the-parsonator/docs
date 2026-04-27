@@ -1,0 +1,6 @@
+# Calorie tracker
+calorie-tracker/.env.local
+calorie-tracker/prisma/dev.db
+calorie-tracker/prisma/*.db-journal
+calorie-tracker/.next/
+calorie-tracker/node_modules/
