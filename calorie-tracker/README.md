@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Calorie Tracker
 
-## Getting Started
+Mobile-first calorie counting app. Log food by name, barcode scan, or photo. Numbers only — no motivational copy.
 
-First, run the development server:
+## Stack
+
+- **Framework**: Next.js 15 (App Router, TypeScript)
+- **Database**: SQLite locally / Turso (LibSQL) in production via Prisma 7
+- **Auth**: JWT in httpOnly cookie (`jose`)
+- **Styling**: Tailwind CSS v4
+- **Analytics**: PostHog + Sentry
+
+## Local setup
 
 ```bash
+# 1. Install dependencies
+npm install
+
+# 2. Copy environment file and fill in values
+cp .env.example .env.local
+
+# 3. Run database migration
+npx prisma migrate dev --name init
+
+# 4. Start dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Required | Description |
+|---|---|---|
+| `DATABASE_URL` | Yes | `file:./prisma/dev.db` locally; `libsql://xxx.turso.io` in production |
+| `TURSO_AUTH_TOKEN` | Production only | Auth token from Turso dashboard |
+| `JWT_SECRET` | Yes | ≥ 32 chars random string — `openssl rand -base64 32` |
+| `ANTHROPIC_API_KEY` | Optional | Enables photo food recognition (Claude Haiku) |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Optional | PostHog project key |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Optional | Defaults to `https://eu.i.posthog.com` |
+| `NEXT_PUBLIC_SENTRY_DSN` | Optional | Sentry DSN for error tracking |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Vercel + Turso
 
-## Learn More
+### 1. Create Turso database
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+turso db create calorie-tracker
+turso db show calorie-tracker           # copy the URL
+turso db tokens create calorie-tracker  # copy the token
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 2. Run production migration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+DATABASE_URL=libsql://xxx.turso.io \
+TURSO_AUTH_TOKEN=your-token \
+npx prisma migrate deploy
+```
 
-## Deploy on Vercel
+### 3. Deploy to Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+vercel deploy --prod
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set these environment variables in the Vercel dashboard:
+
+- `DATABASE_URL` — your Turso URL
+- `TURSO_AUTH_TOKEN` — your Turso auth token
+- `JWT_SECRET` — a random 32+ char string
+- `ANTHROPIC_API_KEY` — if photo recognition is wanted
+
+### 4. Analytics (optional)
+
+- **PostHog**: create a project at posthog.com, add `NEXT_PUBLIC_POSTHOG_KEY`
+- **Sentry**: create a project at sentry.io, add `NEXT_PUBLIC_SENTRY_DSN`
+
+Both are no-ops if the keys are absent — safe to skip for initial deploy.
+
+## Features
+
+- **Auth**: email + password, JWT cookie, rate-limited login (5/min/IP)
+- **Food logging**: manual entry, barcode scan (OpenFoodFacts), photo recognition (Claude Haiku)
+- **Photo scan limit**: 10/user/day, tracked in DB (survives deploys)
+- **History**: per-day log with calorie target snapshot
+- **Editable target**: tap the `/ 2000 kcal` display to change inline
+- **Consistency counter**: consecutive days logged, shown in muted text
+- **Recent foods**: one-tap re-add from last 5 entries
+- **PWA-ready**: installable to home screen, standalone display mode
+
+## Phase 2 (planned)
+
+- Billing abstraction layer (LemonSqueezy / Paddle — merchant of record handles global VAT)
+- Password reset + welcome email (Resend)

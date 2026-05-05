@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { track } from "@/lib/analytics";
 
 type Props = {
   target: number;
@@ -23,6 +24,7 @@ export function TargetEditor({ target, isFirstDay }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ calorieTarget: n }),
       });
+      track("target_changed", { from: target, to: n });
       await queryClient.invalidateQueries({ queryKey: ["daily-log"] });
     } else {
       setValue(String(target));

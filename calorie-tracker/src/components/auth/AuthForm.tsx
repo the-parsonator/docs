@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { track } from "@/lib/analytics";
 
 type Mode = "login" | "register";
 
@@ -30,6 +31,7 @@ export function AuthForm() {
         setError(data.error ?? "Failed.");
         return;
       }
+      if (mode === "register") track("user_registered");
       router.push("/dashboard");
       router.refresh();
     } catch {

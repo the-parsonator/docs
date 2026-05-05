@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useAddFoodEntry } from "@/hooks/useDailyLog";
+import { track } from "@/lib/analytics";
 
 const BarcodeScanner = dynamic(
   () => import("./BarcodeScanner").then((m) => m.BarcodeScanner),
@@ -35,7 +36,9 @@ export function FoodLogger({ initialName = "", initialCalories = "" }: Props) {
       if (data.found) {
         setName(data.name);
         setCalories(String(data.calories));
+        track("food_logged", { method: "barcode" });
       } else {
+        track("barcode_not_found");
         setError("Not found");
       }
     } catch {
@@ -48,6 +51,7 @@ export function FoodLogger({ initialName = "", initialCalories = "" }: Props) {
       if (result.found && result.name && result.calories !== undefined) {
         setName(result.name);
         setCalories(String(result.calories));
+        track("food_logged", { method: "photo" });
       } else {
         setError("Not food.");
       }
@@ -65,6 +69,7 @@ export function FoodLogger({ initialName = "", initialCalories = "" }: Props) {
     }
     try {
       await addMutation.mutateAsync({ name: name.trim(), calories: cal });
+      track("food_logged", { method: "manual" });
       setName("");
       setCalories("");
     } catch {
