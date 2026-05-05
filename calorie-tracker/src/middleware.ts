@@ -5,13 +5,8 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/history/:path*",
-    "/api/daily-log/:path*",
-    "/api/food-entry/:path*",
-    "/api/food-photo/:path*",
-    "/api/food-search/:path*",
-    "/api/history/:path*",
-    "/api/recent-foods/:path*",
-    "/api/auth/me/:path*",
+    // Protect all /api/* except the three public auth endpoints
+    "/api/((?!auth/(register|login|logout)).+)",
   ],
 };
 

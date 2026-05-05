@@ -15,5 +15,10 @@ export const UpdateTargetSchema = z.object({
 });
 
 export const FoodPhotoSchema = z.object({
-  image: z.string().min(10),
+  image: z.string().min(10).max(2_000_000), // ~1.5 MB decoded
+});
+
+export const ClaudePhotoResponseSchema = z.object({
+  name: z.string().min(1).max(200),
+  calories: z.coerce.number().int().positive().max(10000),
 });

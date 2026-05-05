@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
 import { getUserIdFromRequest } from "@/lib/auth";
-import { FoodPhotoSchema } from "@/lib/validate";
+import { FoodPhotoSchema, ClaudePhotoResponseSchema } from "@/lib/validate";
 
 const DAILY_LIMIT = 10;
 
@@ -55,20 +55,36 @@ export async function POST(request: NextRequest) {
     const text =
       message.content[0].type === "text" ? message.content[0].text.trim() : "";
 
+    if (text === "NOT_FOOD") {
+      // Increment after confirming a valid (non-food) scan — not before parse
+      await prisma.user.update({
+        where: { id: userId },
+        data: { photoScansDate: today, photoScansUsed: scansUsed + 1 },
+      });
+      return Response.json({ found: false, scansRemaining: DAILY_LIMIT - scansUsed - 1 });
+    }
+
+    let rawJson: unknown;
+    try {
+      rawJson = JSON.parse(text);
+    } catch {
+      return Response.json({ error: "Failed." }, { status: 500 });
+    }
+
+    const validated = ClaudePhotoResponseSchema.safeParse(rawJson);
+    if (!validated.success) {
+      return Response.json({ error: "Failed." }, { status: 500 });
+    }
+
     await prisma.user.update({
       where: { id: userId },
       data: { photoScansDate: today, photoScansUsed: scansUsed + 1 },
     });
 
-    if (text === "NOT_FOOD") {
-      return Response.json({ found: false, scansRemaining: DAILY_LIMIT - scansUsed - 1 });
-    }
-
-    const parsed2 = JSON.parse(text) as { name: string; calories: number };
     return Response.json({
       found: true,
-      name: String(parsed2.name),
-      calories: Math.round(Number(parsed2.calories)),
+      name: validated.data.name,
+      calories: validated.data.calories,
       scansRemaining: DAILY_LIMIT - scansUsed - 1,
     });
   } catch {

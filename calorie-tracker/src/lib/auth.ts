@@ -3,9 +3,15 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 const COOKIE_NAME = "auth_token";
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-do-not-use-in-production"
-);
+
+function buildSecret(): Uint8Array {
+  const raw = process.env.JWT_SECRET;
+  if (!raw || raw.length < 32) {
+    throw new Error("JWT_SECRET must be set and at least 32 characters");
+  }
+  return new TextEncoder().encode(raw);
+}
+const secret = buildSecret();
 
 export async function signToken(payload: { sub: string; email: string }) {
   return new SignJWT(payload)
