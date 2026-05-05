@@ -1,12 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import { useDailyLog } from "@/hooks/useDailyLog";
 import { CalorieDisplay } from "./CalorieDisplay";
 import { FoodList } from "./FoodList";
 import { FoodLogger } from "./FoodLogger";
+import { RecentFoods } from "./RecentFoods";
+import { StreakBadge } from "./StreakBadge";
 
 export function DashboardClient() {
   const { data, isLoading, isError } = useDailyLog();
+  const [prefill, setPrefill] = useState<{ name: string; calories: string; key: number }>({
+    name: "",
+    calories: "",
+    key: 0,
+  });
 
   if (isLoading) {
     return (
@@ -35,10 +43,20 @@ export function DashboardClient() {
     0
   );
 
+  // isFirstDay: approximate by checking if the log has zero entries
+  const isFirstDay = log.foodEntries.length === 0;
+
+  function handleRecentSelect(name: string, calories: number) {
+    setPrefill((p) => ({ name, calories: String(calories), key: p.key + 1 }));
+  }
+
   return (
     <div className="min-h-[100dvh] flex flex-col">
       <header className="flex items-center justify-between px-4 min-h-[48px] border-b border-gray-100">
-        <span className="text-sm text-gray-400">calorie tracker</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-400">calorie tracker</span>
+          <StreakBadge />
+        </div>
         <button
           onClick={async () => {
             await fetch("/api/auth/logout", { method: "POST" });
@@ -49,9 +67,18 @@ export function DashboardClient() {
           Log out
         </button>
       </header>
-      <CalorieDisplay target={log.calorieTarget} consumed={consumed} />
+      <CalorieDisplay
+        target={log.calorieTarget}
+        consumed={consumed}
+        isFirstDay={isFirstDay}
+      />
+      <RecentFoods onSelect={handleRecentSelect} />
       <FoodList entries={log.foodEntries} />
-      <FoodLogger />
+      <FoodLogger
+        key={prefill.key}
+        initialName={prefill.name}
+        initialCalories={prefill.calories}
+      />
     </div>
   );
 }

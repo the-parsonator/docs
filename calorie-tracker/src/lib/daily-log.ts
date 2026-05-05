@@ -5,7 +5,7 @@ export async function getOrCreateTodayLog(userId: number) {
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
   return prisma.dailyLog.upsert({
     where: { userId_date: { userId, date: today } },
-    update: {},
+    update: { calorieTarget: user.calorieTarget },
     create: { userId, date: today, calorieTarget: user.calorieTarget },
     include: { foodEntries: { orderBy: { timestamp: "asc" } } },
   });

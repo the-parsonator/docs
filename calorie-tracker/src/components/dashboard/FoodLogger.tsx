@@ -15,14 +15,14 @@ const PhotoLogger = dynamic(
 );
 
 type Props = {
-  prefillName?: string;
-  prefillCalories?: string;
+  initialName?: string;
+  initialCalories?: string;
 };
 
-export function FoodLogger({ prefillName = "", prefillCalories = "" }: Props) {
+export function FoodLogger({ initialName = "", initialCalories = "" }: Props) {
   const addMutation = useAddFoodEntry();
-  const [name, setName] = useState(prefillName);
-  const [calories, setCalories] = useState(prefillCalories);
+  const [name, setName] = useState(initialName);
+  const [calories, setCalories] = useState(initialCalories);
   const [showScanner, setShowScanner] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [error, setError] = useState("");
