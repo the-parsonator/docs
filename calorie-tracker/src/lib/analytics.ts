@@ -1,5 +1,3 @@
-"use client";
-
 import posthog from "posthog-js";
 
 let initialised = false;

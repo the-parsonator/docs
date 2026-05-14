@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
-import { signToken, setAuthCookie } from "@/lib/auth";
+import { signToken, setAuthCookie, createSession } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { AuthSchema } from "@/lib/validate";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  if (!rateLimit(ip)) {
+  if (!(await rateLimit(ip))) {
     return Response.json({ error: "Too many attempts." }, { status: 429 });
   }
 
@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
     data: { email, passwordHash },
   });
 
-  const token = await signToken({ sub: String(user.id), email: user.email });
+  const sid = await createSession(user.id);
+  const token = await signToken({ sub: String(user.id), email: user.email, sid });
   const response = NextResponse.json(
     { id: user.id, email: user.email, calorieTarget: user.calorieTarget },
     { status: 201 }

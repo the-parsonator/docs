@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 const COOKIE_NAME = "auth_token";
 
@@ -13,7 +14,27 @@ function buildSecret(): Uint8Array {
 }
 const secret = buildSecret();
 
-export async function signToken(payload: { sub: string; email: string }) {
+export async function createSession(userId: number): Promise<string> {
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const session = await prisma.session.create({ data: { userId, expiresAt } });
+  return session.id;
+}
+
+export async function revokeSession(sessionId: string): Promise<void> {
+  await prisma.session.update({
+    where: { id: sessionId },
+    data: { revokedAt: new Date() },
+  }).catch(() => {});
+}
+
+async function isSessionValid(sessionId: string): Promise<boolean> {
+  const session = await prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session || session.revokedAt) return false;
+  if (session.expiresAt < new Date()) return false;
+  return true;
+}
+
+export async function signToken(payload: { sub: string; email: string; sid: string }) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
@@ -21,10 +42,13 @@ export async function signToken(payload: { sub: string; email: string }) {
     .sign(secret);
 }
 
-export async function verifyToken(token: string): Promise<{ sub: string; email: string } | null> {
+export async function verifyToken(
+  token: string
+): Promise<{ sub: string; email: string; sid: string } | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
-    return payload as { sub: string; email: string };
+    if (!payload.sub || !payload.sid) return null;
+    return payload as { sub: string; email: string; sid: string };
   } catch {
     return null;
   }
@@ -64,6 +88,7 @@ export async function getUserIdFromRequest(request: NextRequest): Promise<number
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
+  if (!(await isSessionValid(payload.sid))) return null;
   return parseInt(payload.sub, 10);
 }
 
@@ -72,5 +97,6 @@ export async function getUserIdFromCookies(): Promise<number | null> {
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
+  if (!(await isSessionValid(payload.sid))) return null;
   return parseInt(payload.sub, 10);
 }
