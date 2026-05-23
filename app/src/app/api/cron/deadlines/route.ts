@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { findDueGoals, markAwaitingProof } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
-
-const findDue = db.prepare(`
-  SELECT * FROM goals
-   WHERE status = 'active'
-     AND date(deadline) <= date('now')
-`);
-const markAwaiting = db.prepare(`
-  UPDATE goals SET status = 'awaiting_proof' WHERE id = ?
-`);
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -18,16 +9,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const due = findDue.all() as Array<{
-    id: string;
-    slug: string;
-    title: string;
-    owner_email: string;
-    stake_pence: number;
-  }>;
+  const due = await findDueGoals();
 
   for (const g of due) {
-    markAwaiting.run(g.id);
+    await markAwaitingProof(g.id);
     await sendEmail({
       to: g.owner_email,
       subject: `Deadline today: ${g.title}`,

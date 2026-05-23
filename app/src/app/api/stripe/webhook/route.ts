@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
-import { db } from "@/lib/db";
+import { activateGoalById } from "@/lib/db";
 import { verifyWebhookSignature } from "@/lib/stripe";
-
-const activateById = db.prepare(`
-  UPDATE goals
-     SET stripe_pm = @pm, status = 'active'
-   WHERE id = @id AND status = 'pending_setup'
-`);
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
@@ -30,7 +24,7 @@ export async function POST(req: NextRequest) {
           ? si.payment_method
           : si.payment_method?.id;
       if (goalId && pm) {
-        activateById.run({ id: goalId, pm });
+        await activateGoalById({ id: goalId, paymentMethod: pm });
       }
       break;
     }

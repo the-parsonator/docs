@@ -1,33 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { db, getGoalBySlug, type GoalStatus } from "@/lib/db";
+import {
+  getGoalBySlug,
+  recordProofAttempt,
+  type GoalStatus,
+} from "@/lib/db";
+import { uploadProof } from "@/lib/storage";
 import { verifyProof } from "@/lib/vision";
 import { chargeStake } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email";
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "./data/uploads";
-
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-const updateAttempt = db.prepare(`
-  UPDATE goals
-     SET attempts = attempts + 1,
-         proof_path = @path,
-         proof_verdict = @verdict,
-         proof_reason = @reason,
-         status = @status,
-         charged_at = COALESCE(@charged_at, charged_at)
-   WHERE slug = @slug
-`);
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const goal = getGoalBySlug.get(slug);
+  const goal = await getGoalBySlug(slug);
   if (!goal) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -55,11 +45,7 @@ export async function POST(
   }
 
   const buf = Buffer.from(await image.arrayBuffer());
-  mkdirSync(UPLOAD_DIR, { recursive: true });
-  const ext = mediaType.split("/")[1];
-  const filename = `${slug}-${Date.now()}.${ext}`;
-  const filepath = join(UPLOAD_DIR, filename);
-  writeFileSync(filepath, buf);
+  const proofPath = await uploadProof({ slug, buffer: buf, mediaType });
 
   const verdict = await verifyProof({
     proofPrompt: goal.proof_prompt,
@@ -98,13 +84,14 @@ export async function POST(
     newStatus = "awaiting_proof";
   }
 
-  updateAttempt.run({
+  await recordProofAttempt({
     slug,
-    path: filepath,
+    proofPath,
     verdict: verdict.verdict,
     reason: verdict.reason,
-    status: newStatus,
-    charged_at: chargedAt,
+    newStatus,
+    attempts: nextAttempts,
+    chargedAt,
   });
 
   if (newStatus === "won") {

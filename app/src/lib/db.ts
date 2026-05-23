@@ -1,52 +1,31 @@
-import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-const DB_PATH = process.env.DB_PATH || "./data/app.db";
-
-mkdirSync(dirname(DB_PATH), { recursive: true });
+const url = process.env.SUPABASE_URL;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 declare global {
-  var __db: Database.Database | undefined;
+  var __supabase: SupabaseClient | undefined;
 }
 
-export const db = global.__db ?? new Database(DB_PATH);
-if (!global.__db) {
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  global.__db = db;
+export const supabase: SupabaseClient | null =
+  global.__supabase ??
+  (url && serviceKey
+    ? createClient(url, serviceKey, { auth: { persistSession: false } })
+    : null);
+
+if (supabase && !global.__supabase) {
+  global.__supabase = supabase;
 }
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS goals (
-    id              TEXT PRIMARY KEY,
-    slug            TEXT NOT NULL UNIQUE,
-    title           TEXT NOT NULL,
-    proof_prompt    TEXT NOT NULL,
-    owner_email     TEXT NOT NULL,
-    deadline        TEXT NOT NULL,
-    timezone        TEXT NOT NULL DEFAULT 'Europe/London',
-    stake_pence     INTEGER NOT NULL,
-    currency        TEXT NOT NULL DEFAULT 'gbp',
-    stripe_customer TEXT,
-    stripe_setup_intent TEXT,
-    stripe_pm       TEXT,
-    status          TEXT NOT NULL DEFAULT 'pending_setup',
-    proof_path      TEXT,
-    proof_verdict   TEXT,
-    proof_reason    TEXT,
-    attempts        INTEGER NOT NULL DEFAULT 0,
-    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
-    charged_at      TEXT
-  );
-  CREATE INDEX IF NOT EXISTS idx_goals_deadline ON goals(deadline, status);
-`);
+export const supabaseConfigured = () => supabase !== null;
 
-// Idempotent column add for older dev DBs created before this column existed.
-try {
-  db.exec("ALTER TABLE goals ADD COLUMN stripe_setup_intent TEXT");
-} catch {
-  // already exists
+function requireClient(): SupabaseClient {
+  if (!supabase) {
+    throw new Error(
+      "Supabase not configured: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local"
+    );
+  }
+  return supabase;
 }
 
 export type GoalStatus =
@@ -79,12 +58,113 @@ export type Goal = {
   charged_at: string | null;
 };
 
-export const getGoalBySlug = db.prepare<[string], Goal>(
-  "SELECT * FROM goals WHERE slug = ?"
-);
-export const getGoalById = db.prepare<[string], Goal>(
-  "SELECT * FROM goals WHERE id = ?"
-);
-export const listRecentGoals = db.prepare<[], Goal>(
-  "SELECT * FROM goals WHERE status IN ('won','lost') ORDER BY created_at DESC LIMIT 20"
-);
+export type NewGoal = {
+  id: string;
+  slug: string;
+  title: string;
+  proof_prompt: string;
+  owner_email: string;
+  deadline: string;
+  stake_pence: number;
+  stripe_customer: string | null;
+  stripe_setup_intent: string | null;
+  status: GoalStatus;
+};
+
+export async function getGoalBySlug(slug: string): Promise<Goal | null> {
+  const { data, error } = await requireClient()
+    .from("goals")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Goal | null) ?? null;
+}
+
+export async function listRecentGoals(): Promise<Goal[]> {
+  if (!supabase) return []; // landing page renders fine without DB
+  const { data, error } = await supabase
+    .from("goals")
+    .select("*")
+    .in("status", ["won", "lost"])
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw error;
+  return (data as Goal[] | null) ?? [];
+}
+
+export async function insertGoal(g: NewGoal): Promise<void> {
+  const { error } = await requireClient().from("goals").insert(g);
+  if (error) throw error;
+}
+
+export async function activateGoalBySlug(args: {
+  slug: string;
+  paymentMethod: string;
+}): Promise<Goal | null> {
+  const { data, error } = await requireClient()
+    .from("goals")
+    .update({ stripe_pm: args.paymentMethod, status: "active" })
+    .eq("slug", args.slug)
+    .eq("status", "pending_setup")
+    .select("*")
+    .maybeSingle();
+  if (error) throw error;
+  return (data as Goal | null) ?? null;
+}
+
+export async function activateGoalById(args: {
+  id: string;
+  paymentMethod: string;
+}): Promise<void> {
+  const { error } = await requireClient()
+    .from("goals")
+    .update({ stripe_pm: args.paymentMethod, status: "active" })
+    .eq("id", args.id)
+    .eq("status", "pending_setup");
+  if (error) throw error;
+}
+
+export async function recordProofAttempt(args: {
+  slug: string;
+  proofPath: string;
+  verdict: string;
+  reason: string;
+  newStatus: GoalStatus;
+  attempts: number;
+  chargedAt: string | null;
+}): Promise<void> {
+  const patch: Record<string, unknown> = {
+    proof_path: args.proofPath,
+    proof_verdict: args.verdict,
+    proof_reason: args.reason,
+    status: args.newStatus,
+    attempts: args.attempts,
+  };
+  if (args.chargedAt) patch.charged_at = args.chargedAt;
+
+  const { error } = await requireClient()
+    .from("goals")
+    .update(patch)
+    .eq("slug", args.slug);
+  if (error) throw error;
+}
+
+export async function findDueGoals(): Promise<Goal[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await requireClient()
+    .from("goals")
+    .select("*")
+    .eq("status", "active")
+    .lte("deadline", today);
+  if (error) throw error;
+  return (data as Goal[] | null) ?? [];
+}
+
+export async function markAwaitingProof(id: string): Promise<void> {
+  const { error } = await requireClient()
+    .from("goals")
+    .update({ status: "awaiting_proof" })
+    .eq("id", id);
+  if (error) throw error;
+}

@@ -8,7 +8,7 @@ export default async function ProofPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const goal = getGoalBySlug.get(slug);
+  const goal = await getGoalBySlug(slug);
   if (!goal) notFound();
 
   if (goal.status === "won" || goal.status === "lost") {

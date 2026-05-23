@@ -46,16 +46,28 @@ Accountability tracker. Users make a public pact, stake real money, and prove th
 ## Tech stack
 - Next.js 15 App Router + TypeScript strict + React 19
 - Tailwind v4 (`@theme` tokens in `globals.css`)
-- SQLite via `better-sqlite3` (one file at `data/app.db`, one table `goals`)
+- **Supabase** Postgres + Storage (`@supabase/supabase-js`). Service-role key
+  only, server-side. No Supabase Auth yet — email remains the identifier.
 - Stripe SDK (`stripe` + `@stripe/stripe-js` + `@stripe/react-stripe-js`)
 - Anthropic SDK (`claude-opus-4-7` with vision for the judge)
 - Resend for email
 - `nanoid` for IDs (24-char internal, 8-char shareable slug)
 - `zod` for input validation
 
+## Supabase setup
+- Schema lives in `app/supabase/schema.sql` — paste into the Supabase SQL editor
+  on first setup. Idempotent, safe to re-run.
+- Storage bucket `proofs` (private) is created by the same SQL. Selfies are
+  uploaded via service role, served via short-lived signed URLs.
+- RLS is enabled on `goals` with **no policies**. The app uses the service-role
+  key exclusively, which bypasses RLS. This is defence-in-depth in case anon
+  access is ever exposed.
+
 ## File layout
 ```
 app/
+  supabase/
+    schema.sql                       # Postgres schema + storage bucket
   src/
     app/
       layout.tsx, page.tsx, globals.css, icon.svg
@@ -67,21 +79,29 @@ app/
         cron/deadlines/route.ts      # bearer-auth, daily deadline transitions
         stripe/webhook/route.ts      # setup_intent.succeeded -> activate
     lib/
-      db.ts, stripe.ts, vision.ts, email.ts, ids.ts, money.ts
+      db.ts          # supabase-js wrapper + typed async query functions
+      storage.ts     # supabase storage upload + signed URL helpers
+      stripe.ts, vision.ts, email.ts, ids.ts, money.ts
     components/
       CreateGoalForm.tsx, PaymentForm.tsx, ProofUploader.tsx, StatusBadge.tsx
 ```
 
 ## Conventions (do not break without reason)
-- **One table.** Schema in `src/lib/db.ts` with `CREATE TABLE IF NOT EXISTS` + idempotent `ALTER` for new columns. No ORM, no migration tool.
-- **No auth.** Email is the identifier. Nothing is gated behind a login.
-- **Money in pence.** Column is `stake_pence` (int). Format via `src/lib/money.ts` `formatGBP`.
-- **Key-absent dev mode.** Every external dep checks for its env var and degrades gracefully:
+- **One table.** Schema in `app/supabase/schema.sql`. No ORM. All queries
+  go through the typed async functions in `src/lib/db.ts`.
+- **No auth.** Email is the identifier. Nothing is gated behind a login. We
+  use the Supabase service-role key only — never the anon key.
+- **Money in pence.** Column is `stake_pence` (int). Format via
+  `src/lib/money.ts` `formatGBP`.
+- **Key-absent dev mode** (still applies to *non-DB* deps):
+  - No `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` → routes that touch the DB
+    throw a loud, clear error. Landing renders fine (empty wall). This is
+    intentional — there's no meaningful stub for a database.
   - No `STRIPE_SECRET_KEY` → goal goes straight to `active`, `clientSecret` is null
   - No `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` → PaymentForm renders a warning banner
   - No `ANTHROPIC_API_KEY` → judge returns `INCONCLUSIVE` with explanation
   - No `RESEND_API_KEY` → emails log to console as `[email:stub]`
-  This is the test harness. Do not introduce mocks or test scaffolding.
+  Do not introduce mocks or test scaffolding.
 - **Single source of truth for SetupIntent activation.** Webhook is authoritative; the goal page's `?setup_complete=1` handler re-fetches from Stripe as belt-and-braces. Both paths are idempotent.
 - **CSS tokens:** `--color-pact` (green), `--color-pact-dark`, `--color-burn` (red). Brand green is `#16a34a`.
 
@@ -114,7 +134,9 @@ app/
 ## Local dev
 ```
 cd app
-cp .env.example .env.local   # all keys optional; absence triggers dev mode
+cp .env.example .env.local
+# At minimum set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY (free project at supabase.com).
+# Run supabase/schema.sql once in the SQL editor to create the goals table + proofs bucket.
 npm install
 npm run dev                  # localhost:3000
 npm run typecheck            # strict, must be 0 errors

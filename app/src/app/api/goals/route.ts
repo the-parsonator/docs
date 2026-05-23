@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { db } from "@/lib/db";
+import { insertGoal, type GoalStatus } from "@/lib/db";
 import { newId, newSlug } from "@/lib/ids";
 import { createCustomerAndSetupIntent, stripeConfigured } from "@/lib/stripe";
 import { sendEmail } from "@/lib/email";
@@ -14,16 +14,6 @@ const schema = z.object({
   accept_terms: z.literal(true),
   waive_cooling_off: z.literal(true),
 });
-
-const insert = db.prepare(`
-  INSERT INTO goals (
-    id, slug, title, proof_prompt, owner_email, deadline,
-    stake_pence, stripe_customer, stripe_setup_intent, status
-  ) VALUES (
-    @id, @slug, @title, @proof_prompt, @owner_email, @deadline,
-    @stake_pence, @stripe_customer, @stripe_setup_intent, @status
-  )
-`);
 
 export async function POST(req: NextRequest) {
   const json = await req.json().catch(() => null);
@@ -50,7 +40,7 @@ export async function POST(req: NextRequest) {
   let customerId: string | null = null;
   let setupIntentId: string | null = null;
   let clientSecret: string | null = null;
-  let status: "pending_setup" | "active" = "pending_setup";
+  let status: GoalStatus = "pending_setup";
 
   if (stripeConfigured()) {
     try {
@@ -73,7 +63,7 @@ export async function POST(req: NextRequest) {
     status = "active";
   }
 
-  insert.run({
+  await insertGoal({
     id,
     slug,
     title: input.title,

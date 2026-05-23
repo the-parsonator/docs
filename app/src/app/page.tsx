@@ -2,8 +2,8 @@ import { listRecentGoals } from "@/lib/db";
 import { formatGBP } from "@/lib/money";
 import CreateGoalForm from "@/components/CreateGoalForm";
 
-export default function Home() {
-  const recent = listRecentGoals.all();
+export default async function Home() {
+  const recent = await listRecentGoals();
 
   return (
     <main>
