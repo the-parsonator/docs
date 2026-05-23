@@ -2,6 +2,15 @@
 > For Mintlify product knowledge (components, configuration, writing standards),
 > install the Mintlify skill: `npx skills add https://mintlify.com/docs`
 
+# Repository overview
+
+This repo has **two** things in it:
+
+1. **Mintlify documentation site** at the root (`docs.json`, `*.mdx`).
+2. **Pact** — an accountability tracker app under `app/`. See `app/AGENTS.md` for product, brand, stack, and conventions. If a task is about the app, read that file first.
+
+---
+
 # Documentation project instructions
 
 ## About this project
