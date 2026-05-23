@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>calorie tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    #app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+    #food-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    #logger {
+      position: sticky;
+      bottom: 0;
+    }
+    .chip {
+      min-height: 36px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .food-row {
+      min-height: 48px;
+    }
+    .delete-btn {
+      min-height: 48px;
+      min-width: 48px;
+    }
+    input[type="text"], input[type="number"] {
+      outline: none;
+    }
+    #chips-row {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #chips-row::-webkit-scrollbar {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between px-4 bg-slate-900 border-b border-slate-700" style="min-height:48px;">
+    <span class="text-sm font-medium tracking-wide text-slate-300">calorie tracker</span>
+    <button
+      id="btn-logout"
+      class="text-sm text-slate-400 hover:text-slate-200 transition-colors px-2"
+      style="min-height:48px;"
+      onclick="handleLogout()"
+    >log out</button>
+  </header>
+
+  <!-- Summary section -->
+  <div class="flex flex-col items-center pt-6 pb-3 px-4 bg-slate-900 border-b border-slate-700">
+    <!-- Big remaining number -->
+    <div id="remaining-display" class="text-7xl font-bold tabular-nums leading-none" style="color: #16a34a;">
+      2,000
+    </div>
+    <div class="text-xs text-gray-400 mt-1 mb-3 tracking-widest uppercase">remaining</div>
+
+    <!-- Progress bar -->
+    <div class="w-full max-w-sm h-1 bg-slate-700 rounded-full overflow-hidden mb-3">
+      <div id="progress-bar" class="h-full rounded-full transition-all duration-200" style="width:0%; background:#16a34a;"></div>
+    </div>
+
+    <!-- Consumed / target row -->
+    <div class="flex items-center gap-1 text-sm text-gray-400">
+      <span id="consumed-display">0</span>
+      <span class="text-gray-500">/</span>
+      <span
+        id="target-display-wrap"
+        title="tap to edit"
+      >
+        <span
+          id="target-display"
+          class="cursor-pointer hover:text-slate-200 transition-colors underline decoration-dotted decoration-gray-500"
+          onclick="startEditTarget()"
+        >2,000</span>
+        <input
+          id="target-input"
+          type="number"
+          inputmode="numeric"
+          class="hidden bg-slate-700 text-slate-100 rounded px-1 w-20 text-sm text-center"
+          onblur="commitTargetEdit()"
+          onkeydown="handleTargetKey(event)"
+        />
+      </span>
+    </div>
+
+    <!-- Over-target surplus -->
+    <div id="surplus-display" class="text-sm font-semibold mt-1 hidden" style="color:#dc2626;"></div>
+  </div>
+
+  <!-- Recent chips -->
+  <div id="chips-row" class="flex gap-2 px-4 py-2 bg-slate-900 border-b border-slate-700">
+    <!-- chips rendered by JS -->
+  </div>
+
+  <!-- Food list -->
+  <div id="food-list" class="bg-slate-950">
+    <!-- entries rendered by JS -->
+  </div>
+
+  <!-- Sticky logger -->
+  <div id="logger" class="bg-slate-900 border-t border-slate-700 px-3 py-2">
+    <div class="flex gap-2 items-center">
+      <input
+        id="input-name"
+        type="text"
+        placeholder="Food"
+        class="flex-1 bg-slate-800 text-slate-100 placeholder-gray-500 rounded-lg px-3 text-sm border border-slate-700 focus:border-slate-500 transition-colors"
+        style="min-height:48px;"
+        onkeydown="handleLoggerKey(event)"
+      />
+      <input
+        id="input-cals"
+        type="number"
+        inputmode="numeric"
+        placeholder="kcal"
+        class="w-20 bg-slate-800 text-slate-100 placeholder-gray-500 rounded-lg px-3 text-sm border border-slate-700 focus:border-slate-500 transition-colors text-center"
+        style="min-height:48px;"
+        onkeydown="handleLoggerKey(event)"
+      />
+      <button
+        id="btn-add"
+        onclick="addEntry()"
+        class="bg-slate-700 hover:bg-slate-600 text-slate-100 font-medium rounded-lg px-4 text-sm transition-colors"
+        style="min-height:48px;"
+      >Add</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'ct_data';
+  const DEFAULT_TARGET = 2000;
+
+  const RECENT_CHIPS = [
+    { name: 'Chicken', calories: 350 },
+    { name: 'Rice',    calories: 200 },
+    { name: 'Banana',  calories: 90  },
+  ];
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let state = {
+    date: todayStr(),
+    target: DEFAULT_TARGET,
+    entries: [],
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function todayStr() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function fmt(n) {
+    return Math.abs(n).toLocaleString();
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  // ── Persistence ────────────────────────────────────────────────────────────
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed.date !== todayStr()) {
+        // New day: keep target, reset entries
+        state.target = parsed.target || DEFAULT_TARGET;
+        state.date = todayStr();
+        state.entries = [];
+      } else {
+        state = parsed;
+      }
+    } catch (_) {
+      // corrupted — start fresh
+    }
+  }
+
+  function save() {
+    state.date = todayStr();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  // ── Computed values ────────────────────────────────────────────────────────
+  function totalConsumed() {
+    return state.entries.reduce((sum, e) => sum + Number(e.calories), 0);
+  }
+
+  function remaining() {
+    return state.target - totalConsumed();
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render() {
+    const consumed = totalConsumed();
+    const rem = remaining();
+    const over = rem < 0;
+    const color = over ? '#dc2626' : '#16a34a';
+
+    // Big number
+    const remEl = document.getElementById('remaining-display');
+    remEl.textContent = fmt(rem);
+    remEl.style.color = color;
+
+    // Progress bar
+    const pct = Math.min(100, (consumed / state.target) * 100);
+    const bar = document.getElementById('progress-bar');
+    bar.style.width = pct + '%';
+    bar.style.background = over ? '#dc2626' : '#16a34a';
+
+    // Consumed / target
+    document.getElementById('consumed-display').textContent = consumed.toLocaleString();
+    document.getElementById('target-display').textContent = state.target.toLocaleString();
+
+    // Surplus
+    const surplusEl = document.getElementById('surplus-display');
+    if (over) {
+      surplusEl.textContent = '+' + fmt(consumed - state.target);
+      surplusEl.classList.remove('hidden');
+    } else {
+      surplusEl.classList.add('hidden');
+    }
+
+    // Food list
+    renderFoodList();
+  }
+
+  function renderFoodList() {
+    const list = document.getElementById('food-list');
+    if (state.entries.length === 0) {
+      list.innerHTML = `
+        <div class="food-row flex items-center px-5 text-gray-400 text-sm border-b border-slate-800">
+          No entries.
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = state.entries.map(entry => `
+      <div class="food-row flex items-center justify-between px-4 border-b border-slate-800 hover:bg-slate-900 transition-colors" data-id="${entry.id}">
+        <div class="flex items-center gap-2 flex-1 min-w-0">
+          <span class="text-slate-500 text-xs select-none">&#9658;</span>
+          <span class="text-sm text-slate-200 truncate">${escHtml(entry.name)}</span>
+        </div>
+        <div class="flex items-center gap-1 ml-2 flex-shrink-0">
+          <span class="text-sm font-medium tabular-nums text-slate-300">${Number(entry.calories).toLocaleString()}</span>
+          <button
+            class="delete-btn flex items-center justify-center text-slate-500 hover:text-red-400 transition-colors rounded text-lg leading-none px-1"
+            onclick="deleteEntry('${entry.id}')"
+            aria-label="delete"
+          >&#215;</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderChips() {
+    const row = document.getElementById('chips-row');
+    row.innerHTML = RECENT_CHIPS.map(chip => `
+      <button
+        class="chip bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-full px-3 border border-slate-700 transition-colors"
+        onclick="fillChip('${escHtml(chip.name)}', ${chip.calories})"
+      >${escHtml(chip.name)} ${chip.calories}</button>
+    `).join('');
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function addEntry() {
+    const nameEl = document.getElementById('input-name');
+    const calsEl = document.getElementById('input-cals');
+    const name = nameEl.value.trim();
+    const cals = parseInt(calsEl.value, 10);
+
+    if (!name || isNaN(cals) || cals < 0) return;
+
+    state.entries.push({ id: uid(), name, calories: cals });
+    save();
+    render();
+
+    nameEl.value = '';
+    calsEl.value = '';
+    nameEl.focus();
+  }
+
+  function deleteEntry(id) {
+    state.entries = state.entries.filter(e => e.id !== id);
+    save();
+    render();
+  }
+
+  function fillChip(name, calories) {
+    document.getElementById('input-name').value = name;
+    document.getElementById('input-cals').value = calories;
+    document.getElementById('input-cals').focus();
+  }
+
+  function handleLoggerKey(event) {
+    if (event.key === 'Enter') addEntry();
+  }
+
+  // ── Target editing ─────────────────────────────────────────────────────────
+  function startEditTarget() {
+    const display = document.getElementById('target-display');
+    const input = document.getElementById('target-input');
+    display.classList.add('hidden');
+    input.classList.remove('hidden');
+    input.value = state.target;
+    input.focus();
+    input.select();
+  }
+
+  function commitTargetEdit() {
+    const display = document.getElementById('target-display');
+    const input = document.getElementById('target-input');
+    const val = parseInt(input.value, 10);
+    if (!isNaN(val) && val > 0) {
+      state.target = val;
+      save();
+    }
+    input.classList.add('hidden');
+    display.classList.remove('hidden');
+    render();
+  }
+
+  function handleTargetKey(event) {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      commitTargetEdit();
+    } else if (event.key === 'Escape') {
+      const display = document.getElementById('target-display');
+      const input = document.getElementById('target-input');
+      input.classList.add('hidden');
+      display.classList.remove('hidden');
+    }
+  }
+
+  // ── Log out ────────────────────────────────────────────────────────────────
+  function handleLogout() {
+    // Clear session data and reset to defaults
+    state = {
+      date: todayStr(),
+      target: DEFAULT_TARGET,
+      entries: [],
+    };
+    save();
+    render();
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  load();
+  renderChips();
+  render();
+</script>
+</body>
+</html>

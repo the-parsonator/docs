@@ -1,0 +1,55 @@
+datasource db {
+  provider = "sqlite"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+model User {
+  id                  Int        @id @default(autoincrement())
+  email               String     @unique
+  passwordHash        String
+  calorieTarget       Int        @default(2000)
+  createdAt           DateTime   @default(now())
+  resetToken          String?
+  resetTokenExpiresAt DateTime?
+  photoScansDate      String?
+  photoScansUsed      Int        @default(0)
+  externalCustomerId  String?    @unique
+  subscriptionStatus  String     @default("free")
+  subscriptionId      String?
+  trialEndsAt         DateTime?
+  dailyLogs           DailyLog[]
+  sessions            Session[]
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    Int
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model DailyLog {
+  id            Int         @id @default(autoincrement())
+  userId        Int
+  date          String
+  calorieTarget Int
+  user          User        @relation(fields: [userId], references: [id])
+  foodEntries   FoodEntry[]
+
+  @@unique([userId, date])
+}
+
+model FoodEntry {
+  id         Int      @id @default(autoincrement())
+  dailyLogId Int
+  name       String
+  calories   Int
+  timestamp  DateTime @default(now())
+  dailyLog   DailyLog @relation(fields: [dailyLogId], references: [id])
+}
