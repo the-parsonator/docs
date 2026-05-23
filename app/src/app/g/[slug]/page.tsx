@@ -1,16 +1,46 @@
 import { notFound } from "next/navigation";
-import { getGoalBySlug } from "@/lib/db";
+import { db, getGoalBySlug } from "@/lib/db";
 import { formatGBP } from "@/lib/money";
+import { retrieveSetupIntent, stripeConfigured } from "@/lib/stripe";
 import StatusBadge from "@/components/StatusBadge";
+
+const activateGoal = db.prepare(`
+  UPDATE goals
+     SET stripe_pm = @pm, status = 'active'
+   WHERE slug = @slug AND status = 'pending_setup'
+`);
+
+async function maybeActivateFromStripe(goal: NonNullable<ReturnType<typeof getGoalBySlug.get>>) {
+  if (!stripeConfigured()) return goal;
+  if (goal.status !== "pending_setup") return goal;
+  if (!goal.stripe_setup_intent) return goal;
+  try {
+    const si = await retrieveSetupIntent(goal.stripe_setup_intent);
+    if (si.status === "succeeded" && typeof si.payment_method === "string") {
+      activateGoal.run({ slug: goal.slug, pm: si.payment_method });
+      return getGoalBySlug.get(goal.slug) ?? goal;
+    }
+  } catch {
+    // Stripe call failed — fall through; webhook will handle eventually.
+  }
+  return goal;
+}
 
 export default async function GoalPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ setup_complete?: string }>;
 }) {
   const { slug } = await params;
-  const goal = getGoalBySlug.get(slug);
+  const { setup_complete } = await searchParams;
+  let goal = getGoalBySlug.get(slug);
   if (!goal) notFound();
+
+  if (setup_complete) {
+    goal = await maybeActivateFromStripe(goal);
+  }
 
   const deadline = new Date(goal.deadline);
   const now = new Date();

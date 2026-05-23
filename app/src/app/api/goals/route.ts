@@ -18,10 +18,10 @@ const schema = z.object({
 const insert = db.prepare(`
   INSERT INTO goals (
     id, slug, title, proof_prompt, owner_email, deadline,
-    stake_pence, stripe_customer, status
+    stake_pence, stripe_customer, stripe_setup_intent, status
   ) VALUES (
     @id, @slug, @title, @proof_prompt, @owner_email, @deadline,
-    @stake_pence, @stripe_customer, @status
+    @stake_pence, @stripe_customer, @stripe_setup_intent, @status
   )
 `);
 
@@ -48,13 +48,18 @@ export async function POST(req: NextRequest) {
   const slug = newSlug();
 
   let customerId: string | null = null;
+  let setupIntentId: string | null = null;
   let clientSecret: string | null = null;
   let status: "pending_setup" | "active" = "pending_setup";
 
   if (stripeConfigured()) {
     try {
-      const r = await createCustomerAndSetupIntent(input.owner_email);
+      const r = await createCustomerAndSetupIntent({
+        email: input.owner_email,
+        goalId: id,
+      });
       customerId = r.customerId;
+      setupIntentId = r.setupIntentId;
       clientSecret = r.clientSecret;
     } catch (e) {
       return NextResponse.json(
@@ -77,6 +82,7 @@ export async function POST(req: NextRequest) {
     deadline: input.deadline,
     stake_pence: input.stake_pounds * 100,
     stripe_customer: customerId,
+    stripe_setup_intent: setupIntentId,
     status,
   });
 

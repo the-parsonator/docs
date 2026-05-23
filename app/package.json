@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "@stripe/react-stripe-js": "^3.10.0",
+    "@stripe/stripe-js": "^5.10.0",
     "better-sqlite3": "^11.7.0",
     "nanoid": "^5.0.9",
     "next": "15.1.4",

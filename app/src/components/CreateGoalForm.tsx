@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import PaymentForm from "./PaymentForm";
 
 export default function CreateGoalForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [secret, setSecret] = useState<{
+    clientSecret: string;
+    slug: string;
+  } | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -31,9 +36,24 @@ export default function CreateGoalForm() {
       setSubmitting(false);
       return;
     }
-    // Redirect to the goal page; in the real flow this is where Stripe
-    // Elements would mount to collect the card before activation.
-    window.location.href = `/g/${data.slug}?setup=1`;
+    if (data.clientSecret) {
+      setSecret({ clientSecret: data.clientSecret, slug: data.slug });
+      setSubmitting(false);
+    } else {
+      // Dev mode without Stripe keys — goal is already active.
+      window.location.href = `/g/${data.slug}`;
+    }
+  }
+
+  if (secret) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-md bg-[--color-pact]/10 px-3 py-2 text-sm text-[--color-pact-dark]">
+          Pact drafted. Add a card to seal it.
+        </div>
+        <PaymentForm clientSecret={secret.clientSecret} slug={secret.slug} />
+      </div>
+    );
   }
 
   const today = new Date();
