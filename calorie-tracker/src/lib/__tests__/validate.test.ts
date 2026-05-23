@@ -7,6 +7,7 @@ import {
   ClaudePhotoResponseSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
+  CheckoutSchema,
 } from "../validate";
 
 describe("AuthSchema", () => {
@@ -104,5 +105,17 @@ describe("ResetPasswordSchema", () => {
   });
   it("rejects a short password", () => {
     expect(ResetPasswordSchema.safeParse({ token: validToken, password: "short" }).success).toBe(false);
+  });
+});
+
+describe("CheckoutSchema", () => {
+  it("accepts a non-empty priceId", () => {
+    expect(CheckoutSchema.safeParse({ priceId: "variant_123" }).success).toBe(true);
+  });
+  it("rejects an empty priceId", () => {
+    expect(CheckoutSchema.safeParse({ priceId: "" }).success).toBe(false);
+  });
+  it("rejects a priceId over 100 chars", () => {
+    expect(CheckoutSchema.safeParse({ priceId: "a".repeat(101) }).success).toBe(false);
   });
 });

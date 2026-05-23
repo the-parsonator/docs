@@ -41,7 +41,10 @@ npm run dev
 | `UPSTASH_REDIS_REST_TOKEN` | Production | Paired with the URL above |
 | `RESEND_API_KEY` | Optional | Enables password reset emails (see below) |
 | `RESEND_FROM_EMAIL` | Optional | Verified sender, e.g. `noreply@yourdomain.com` |
-| `APP_URL` | Production | Public base URL, used in reset email links (e.g. `https://app.example.com`) |
+| `APP_URL` | Production | Public base URL, used in reset email + billing redirect links (e.g. `https://app.example.com`) |
+| `LEMONSQUEEZY_API_KEY` | Optional | Enables billing — create at lemonsqueezy.com/settings/api |
+| `LEMONSQUEEZY_STORE_ID` | With API key | Numeric ID of your LemonSqueezy store |
+| `LEMONSQUEEZY_WEBHOOK_SECRET` | With API key | Used to verify the `X-Signature` header on `/api/webhooks/billing` |
 
 ## Deploy to Vercel + Turso
 
@@ -103,6 +106,20 @@ Required to enable the `/forgot-password` flow. Without these vars, the route st
    - `RESEND_API_KEY`
    - `RESEND_FROM_EMAIL` — must be on the verified domain
    - `APP_URL` — public origin used in the reset link
+
+### 7. Billing (LemonSqueezy)
+
+Billing is provider-agnostic via [src/lib/billing/index.ts](src/lib/billing/index.ts); the default adapter targets [LemonSqueezy](https://lemonsqueezy.com) (merchant of record — handles global VAT for you). To enable:
+
+1. Create a LemonSqueezy account, set up a product with at least one variant (the variant ID becomes your `priceId`).
+2. Create an API key (Settings → API), grab the store ID from your store URL.
+3. Configure a webhook pointing at `https://your-app/api/webhooks/billing`, copy the signing secret.
+4. Add to Vercel:
+   - `LEMONSQUEEZY_API_KEY`
+   - `LEMONSQUEEZY_STORE_ID`
+   - `LEMONSQUEEZY_WEBHOOK_SECRET`
+
+The webhook handler is at [src/app/api/webhooks/billing/route.ts](src/app/api/webhooks/billing/route.ts) and is excluded from the auth proxy because it is HMAC-SHA256 signature-verified.
 
 ## Features
 

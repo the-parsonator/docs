@@ -17,6 +17,10 @@ model User {
   resetTokenExpiresAt DateTime?
   photoScansDate      String?
   photoScansUsed      Int        @default(0)
+  externalCustomerId  String?    @unique
+  subscriptionStatus  String     @default("free")
+  subscriptionId      String?
+  trialEndsAt         DateTime?
   dailyLogs           DailyLog[]
   sessions            Session[]
 }

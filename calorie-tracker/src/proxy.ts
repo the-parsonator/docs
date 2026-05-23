@@ -5,8 +5,8 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/history/:path*",
-    // Protect all /api/* except the public auth endpoints
-    "/api/((?!auth/(?:register|login|logout|forgot-password|reset-password)).+)",
+    // Protect all /api/* except the public auth endpoints and signature-verified webhooks
+    "/api/((?!auth/(?:register|login|logout|forgot-password|reset-password)|webhooks/).+)",
   ],
 };
 

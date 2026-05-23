@@ -32,3 +32,7 @@ export const ResetPasswordSchema = z.object({
   token: z.string().length(64).regex(/^[a-f0-9]+$/),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
+
+export const CheckoutSchema = z.object({
+  priceId: z.string().min(1).max(100),
+});
