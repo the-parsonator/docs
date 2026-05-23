@@ -5,12 +5,12 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/history/:path*",
-    // Protect all /api/* except the three public auth endpoints
-    "/api/((?!auth/(register|login|logout)).+)",
+    // Protect all /api/* except the public auth endpoints
+    "/api/((?!auth/(?:register|login|logout|forgot-password|reset-password)).+)",
   ],
 };
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = getTokenFromRequest(request);
   const payload = token ? await verifyToken(token) : null;
 

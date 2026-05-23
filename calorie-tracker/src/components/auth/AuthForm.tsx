@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { track } from "@/lib/analytics";
 
@@ -82,6 +83,14 @@ export function AuthForm() {
       >
         {mode === "login" ? "Create account" : "Log in"}
       </button>
+      {mode === "login" && (
+        <Link
+          href="/forgot-password"
+          className="block text-sm text-gray-400 underline text-center min-h-[48px] leading-[48px]"
+        >
+          Forgot password?
+        </Link>
+      )}
     </div>
   );
 }

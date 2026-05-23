@@ -5,6 +5,8 @@ import {
   UpdateTargetSchema,
   FoodPhotoSchema,
   ClaudePhotoResponseSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
 } from "../validate";
 
 describe("AuthSchema", () => {
@@ -75,5 +77,32 @@ describe("ClaudePhotoResponseSchema", () => {
   });
   it("rejects unreasonably high calories", () => {
     expect(ClaudePhotoResponseSchema.safeParse({ name: "Pizza", calories: 99999 }).success).toBe(false);
+  });
+});
+
+describe("ForgotPasswordSchema", () => {
+  it("lowercases the email", () => {
+    const r = ForgotPasswordSchema.safeParse({ email: "Foo@BAR.com" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.email).toBe("foo@bar.com");
+  });
+  it("rejects invalid email", () => {
+    expect(ForgotPasswordSchema.safeParse({ email: "nope" }).success).toBe(false);
+  });
+});
+
+describe("ResetPasswordSchema", () => {
+  const validToken = "a".repeat(64);
+  it("accepts a 64-char hex token + 8+ char password", () => {
+    expect(ResetPasswordSchema.safeParse({ token: validToken, password: "password123" }).success).toBe(true);
+  });
+  it("rejects a token of wrong length", () => {
+    expect(ResetPasswordSchema.safeParse({ token: "a".repeat(63), password: "password123" }).success).toBe(false);
+  });
+  it("rejects a non-hex token", () => {
+    expect(ResetPasswordSchema.safeParse({ token: "z".repeat(64), password: "password123" }).success).toBe(false);
+  });
+  it("rejects a short password", () => {
+    expect(ResetPasswordSchema.safeParse({ token: validToken, password: "short" }).success).toBe(false);
   });
 });
