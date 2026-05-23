@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
 const key = process.env.RESEND_API_KEY;
-const from = process.env.RESEND_FROM || "Accountability <hi@example.com>";
+const from = process.env.RESEND_FROM || "Pact <hi@pact.ai>";
 const client = key ? new Resend(key) : null;
 
 export async function sendEmail(args: {

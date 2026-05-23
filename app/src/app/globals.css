@@ -3,8 +3,8 @@
 @theme {
   --color-ink: #0a0a0a;
   --color-paper: #fafaf7;
-  --color-stake: #16a34a;
-  --color-stake-dark: #15803d;
+  --color-pact: #16a34a;
+  --color-pact-dark: #15803d;
   --color-burn: #dc2626;
   --font-display: "Inter", system-ui, sans-serif;
 }
@@ -21,13 +21,13 @@ body {
   @apply inline-flex items-center justify-center rounded-md px-4 py-2.5 font-medium transition;
 }
 .btn-primary {
-  @apply bg-[--color-stake] text-white hover:bg-[--color-stake-dark];
+  @apply bg-[--color-pact] text-white hover:bg-[--color-pact-dark];
 }
 .btn-burn {
   @apply bg-[--color-burn] text-white hover:opacity-90;
 }
 .input {
-  @apply w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-base focus:border-[--color-stake] focus:outline-none focus:ring-2 focus:ring-[--color-stake]/30;
+  @apply w-full rounded-md border border-neutral-300 bg-white px-3 py-2.5 text-base focus:border-[--color-pact] focus:outline-none focus:ring-2 focus:ring-[--color-pact]/30;
 }
 .label {
   @apply mb-1 block text-sm font-medium text-neutral-700;

@@ -24,7 +24,7 @@ export default async function GoalPage({
     <main className="space-y-8">
       <div>
         <p className="text-sm uppercase tracking-wide text-neutral-500">
-          Goal
+          Pact
         </p>
         <h1 className="mt-1 text-3xl font-bold tracking-tight">
           {goal.title}

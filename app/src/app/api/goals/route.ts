@@ -82,8 +82,8 @@ export async function POST(req: NextRequest) {
 
   await sendEmail({
     to: input.owner_email,
-    subject: `Your stake is set: ${input.title}`,
-    text: `You've staked £${input.stake_pounds} on: ${input.title}\n\nDeadline: ${input.deadline}\n\nUpload your proof here: ${process.env.APP_URL || "http://localhost:3000"}/g/${slug}/proof\n\nWin and we charge nothing. Fail and we charge £${input.stake_pounds}.`,
+    subject: `Pact made: ${input.title}`,
+    text: `You've made a pact: ${input.title}\n\nStake: £${input.stake_pounds}\nDeadline: ${input.deadline}\n\nUpload your proof here: ${process.env.APP_URL || "http://localhost:3000"}/g/${slug}/proof\n\nKeep the pact and we charge nothing. Break it and we charge £${input.stake_pounds}.`,
   });
 
   return NextResponse.json({ slug, clientSecret });

@@ -83,7 +83,7 @@ export async function POST(
           customerId: goal.stripe_customer,
           paymentMethod: goal.stripe_pm,
           amountPence: goal.stake_pence,
-          description: `Stake forfeit: ${goal.title}`,
+          description: `Pact broken: ${goal.title}`,
         });
       } catch (e) {
         console.error("Stripe charge failed", e);
@@ -91,7 +91,7 @@ export async function POST(
     }
     await sendEmail({
       to: goal.owner_email,
-      subject: `You burned £${goal.stake_pence / 100}`,
+      subject: `Pact broken: £${goal.stake_pence / 100} charged`,
       text: `Your proof for "${goal.title}" was rejected after 3 attempts. Your stake has been charged.\n\nJudge: ${verdict.reason}`,
     });
   } else {
@@ -110,7 +110,7 @@ export async function POST(
   if (newStatus === "won") {
     await sendEmail({
       to: goal.owner_email,
-      subject: `Verified: ${goal.title}`,
+      subject: `Pact kept: ${goal.title}`,
       text: `Your proof was verified. No charge. Nicely done.`,
     });
   }

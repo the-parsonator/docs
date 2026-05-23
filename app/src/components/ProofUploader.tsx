@@ -92,7 +92,7 @@ export default function ProofUploader({
         <div
           className={`card border-2 ${
             result.verdict === "VERIFIED"
-              ? "border-[--color-stake]"
+              ? "border-[--color-pact]"
               : result.verdict === "REJECTED"
                 ? "border-[--color-burn]"
                 : "border-amber-400"
@@ -103,8 +103,8 @@ export default function ProofUploader({
           </p>
           <p className="mt-2 text-neutral-800">{result.reason}</p>
           {result.verdict === "VERIFIED" && (
-            <p className="mt-3 text-sm text-[--color-stake-dark]">
-              Goal won. No charge.
+            <p className="mt-3 text-sm text-[--color-pact-dark]">
+              Pact kept. No charge.
             </p>
           )}
           {result.verdict !== "VERIFIED" && (

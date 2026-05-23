@@ -44,7 +44,7 @@ export default function CreateGoalForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <label className="label">What will you do?</label>
+        <label className="label">What pact are you making?</label>
         <input
           name="title"
           required
@@ -113,8 +113,8 @@ export default function CreateGoalForm() {
             className="mt-0.5"
           />
           <span>
-            I authorise a charge of my chosen stake if my proof is rejected or
-            not submitted by the deadline + 24h grace.
+            I authorise a charge of my chosen stake if I break the pact — my
+            proof is rejected, or not submitted by the deadline + 24h grace.
           </span>
         </label>
         <label className="flex items-start gap-2">
@@ -140,7 +140,7 @@ export default function CreateGoalForm() {
         disabled={submitting}
         className="btn btn-primary w-full text-base"
       >
-        {submitting ? "Creating…" : "Create goal & add card →"}
+        {submitting ? "Sealing pact…" : "Seal the pact & add card →"}
       </button>
     </form>
   );

@@ -14,12 +14,12 @@ export default async function ProofPage({
   if (goal.status === "won" || goal.status === "lost") {
     return (
       <main>
-        <h1 className="text-2xl font-bold">This goal is already settled.</h1>
+        <h1 className="text-2xl font-bold">This pact is already settled.</h1>
         <a
-          className="mt-4 inline-block text-[--color-stake-dark] underline"
+          className="mt-4 inline-block text-[--color-pact-dark] underline"
           href={`/g/${slug}`}
         >
-          Back to goal →
+          Back to pact →
         </a>
       </main>
     );

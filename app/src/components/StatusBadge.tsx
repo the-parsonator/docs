@@ -4,7 +4,7 @@ const styles: Record<GoalStatus, string> = {
   pending_setup: "bg-neutral-200 text-neutral-700",
   active: "bg-amber-100 text-amber-800",
   awaiting_proof: "bg-blue-100 text-blue-800",
-  won: "bg-[--color-stake]/15 text-[--color-stake-dark]",
+  won: "bg-[--color-pact]/15 text-[--color-pact-dark]",
   lost: "bg-[--color-burn]/15 text-[--color-burn]",
   refunded: "bg-neutral-200 text-neutral-700",
 };
@@ -13,8 +13,8 @@ const labels: Record<GoalStatus, string> = {
   pending_setup: "Awaiting card",
   active: "Active",
   awaiting_proof: "Awaiting proof",
-  won: "Won",
-  lost: "Burned",
+  won: "Kept",
+  lost: "Broken",
   refunded: "Refunded",
 };
 

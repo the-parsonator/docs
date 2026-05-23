@@ -9,19 +9,19 @@ export default function Home() {
     <main>
       <section className="mb-14">
         <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-          Stake real money on your goal.
+          Make a pact with yourself.
           <br />
-          <span className="text-[--color-stake]">Prove it with a selfie.</span>
+          <span className="text-[--color-pact]">Prove it with a selfie.</span>
         </h1>
         <p className="mt-4 max-w-xl text-lg text-neutral-600">
-          Set a deadline. Pre-authorise a stake. On the day, upload a photo of
-          you doing the thing. An AI judge checks it. If you fail, we charge
+          Set a deadline. Stake real money. On the day, upload a photo of you
+          doing the thing. An AI judge checks it. Break the pact and we charge
           your card.
         </p>
       </section>
 
       <section className="card mb-14">
-        <h2 className="mb-4 text-lg font-semibold">Create a goal</h2>
+        <h2 className="mb-4 text-lg font-semibold">Make a pact</h2>
         <CreateGoalForm />
       </section>
 
@@ -29,7 +29,7 @@ export default function Home() {
         <h2 className="mb-4 text-xl font-semibold">How it works</h2>
         <ol className="space-y-3 text-neutral-700">
           <li>
-            <strong>1. Commit.</strong> Write what you&apos;ll do and what a
+            <strong>1. Pact.</strong> Write what you&apos;ll do and what a
             photo of it will look like.
           </li>
           <li>
@@ -37,11 +37,11 @@ export default function Home() {
             Nothing is charged yet.
           </li>
           <li>
-            <strong>3. Prove.</strong> On deadline day, upload a selfie. Claude
-            judges whether it matches your description.
+            <strong>3. Prove.</strong> On deadline day, upload a selfie. An AI
+            judge checks it against your description.
           </li>
           <li>
-            <strong>4. Win or burn.</strong> Verified → no charge. Rejected
+            <strong>4. Kept or broken.</strong> Verified → no charge. Rejected
             three times → your card is charged.
           </li>
         </ol>
@@ -69,11 +69,11 @@ export default function Home() {
                   <span
                     className={
                       g.status === "won"
-                        ? "rounded bg-[--color-stake]/10 px-2 py-0.5 text-xs font-semibold text-[--color-stake-dark]"
+                        ? "rounded bg-[--color-pact]/10 px-2 py-0.5 text-xs font-semibold text-[--color-pact-dark]"
                         : "rounded bg-[--color-burn]/10 px-2 py-0.5 text-xs font-semibold text-[--color-burn]"
                     }
                   >
-                    {g.status === "won" ? "won" : "burned"}
+                    {g.status === "won" ? "kept" : "broken"}
                   </span>
                 </div>
               </li>
